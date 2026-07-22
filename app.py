@@ -119,7 +119,7 @@ def excel_para_download(df: pd.DataFrame) -> bytes:
 
 
 st.title("📦 Indicador de Atendimento de OVs nos TLs")
-st.caption("Monitoramento dos pedidos atendidos por prazo e dos pedidos ainda em atendimento do Cnal de TELEVENDAS")
+st.caption("Monitoramento dos pedidos atendidos por prazo e dos pedidos ainda em atendimento do Canal de TELEVENDAS")
 
 CAMINHO_BASE = Path(__file__).resolve().parent / NOME_ARQUIVO_PADRAO
 
