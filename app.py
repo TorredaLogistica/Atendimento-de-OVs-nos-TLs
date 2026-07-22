@@ -10,10 +10,10 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
-st.set_page_config(page_title="Indicador de Atendimento de OVs nos EAs", page_icon="📦", layout="wide")
+st.set_page_config(page_title="Indicador de Atendimento de OVs nos TLs", page_icon="📦", layout="wide")
 
 ABA_PADRAO = "BASE OVS"
-NOME_ARQUIVO_PADRAO = "Base OVs EAs.xlsx"
+NOME_ARQUIVO_PADRAO = "Base OVs TLs.xlsx"
 
 
 def normalizar_texto(valor: object) -> str:
@@ -119,7 +119,7 @@ def excel_para_download(df: pd.DataFrame) -> bytes:
 
 
 st.title("📦 Indicador de Atendimento de OVs nos TLs")
-st.caption("Monitoramento dos pedidos atendidos por prazo e dos pedidos ainda em atendimento.")
+st.caption("Monitoramento dos pedidos atendidos por prazo e dos pedidos ainda em atendimento do Cnal de TELEVENDAS")
 
 CAMINHO_BASE = Path(__file__).resolve().parent / NOME_ARQUIVO_PADRAO
 
