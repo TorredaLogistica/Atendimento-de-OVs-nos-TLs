@@ -236,33 +236,34 @@ if visualizacao == "📊 Evolução Mensal":
     linhas=[]
     for periodo in pd.period_range(inicio_periodo, periodo_referencia, freq="M"):
         dados_mes=base_evolucao[base_evolucao["Período"] == periodo]
-        total=len(dados_mes)
-        atendido=dados_mes["Pedido Atendido"]
-        dias=dados_mes["Dias para Atendimento"]
-        def pct(cond):
-            return int(cond.sum()) / total * 100 if total else 0.0
+        total_pedidos_mes=len(dados_mes)
+        atendidos=dados_mes[dados_mes["Pedido Atendido"]]
+        total_atendidos=len(atendidos)
+        dias=atendidos["Dias para Atendimento"]
+        def pct_atendidos(cond):
+            return int(cond.sum()) / total_atendidos * 100 if total_atendidos else 0.0
         linhas.append({
             "Mês":periodo.strftime("%m/%Y"),
-            "Até D+0":pct(atendido & (dias == 0)),
-            "Até D+1":pct(atendido & (dias == 1)),
-            "Até D+2":pct(atendido & (dias == 2)),
-            "Acima de D+2":pct(atendido & (dias > 2)),
-            "Total Pedidos":total,
+            "Até D+0":pct_atendidos(dias <= 0),
+            "Até D+1":pct_atendidos(dias <= 1),
+            "Até D+2":pct_atendidos(dias <= 2),
+            "Acima de D+2":pct_atendidos(dias > 2),
+            "Total Pedidos":total_pedidos_mes,
         })
     evolucao=pd.DataFrame(linhas)
-    total_ac=len(base_evolucao)
-    atendido_ac=base_evolucao["Pedido Atendido"]
-    dias_ac=base_evolucao["Dias para Atendimento"]
+    atendidos_ac=base_evolucao[base_evolucao["Pedido Atendido"]]
+    total_atendidos_ac=len(atendidos_ac)
+    dias_ac=atendidos_ac["Dias para Atendimento"]
     def pct_ac(cond):
-        return int(cond.sum()) / total_ac * 100 if total_ac else 0.0
+        return int(cond.sum()) / total_atendidos_ac * 100 if total_atendidos_ac else 0.0
     st.subheader(f"Indicadores Consolidados — Acumulado ({periodo_acumulado} meses)")
     c1,c2,c3,c4,c5=st.columns(5)
-    c1.metric("SLA D+0", f"{pct_ac(atendido_ac & (dias_ac == 0)):.2f}%".replace('.',','))
-    c2.metric("SLA D+1", f"{pct_ac(atendido_ac & (dias_ac == 1)):.2f}%".replace('.',','))
-    c3.metric("SLA D+2", f"{pct_ac(atendido_ac & (dias_ac == 2)):.2f}%".replace('.',','))
-    c4.metric("SLA Acima de D+2", f"{pct_ac(atendido_ac & (dias_ac > 2)):.2f}%".replace('.',','))
+    c1.metric("Até D+0", f"{pct_ac(dias_ac <= 0):.2f}%".replace('.',','))
+    c2.metric("Até D+1", f"{pct_ac(dias_ac <= 1):.2f}%".replace('.',','))
+    c3.metric("Até D+2", f"{pct_ac(dias_ac <= 2):.2f}%".replace('.',','))
+    c4.metric("Acima de D+2", f"{pct_ac(dias_ac > 2):.2f}%".replace('.',','))
     c5.metric("Total Pedidos", f"{len(base_evolucao):,}".replace(',','.'))
-    st.info("Percentuais calculados sobre o total de pedidos, usando as mesmas faixas exclusivas da Visão Diária: D+0, D+1, D+2 e acima de D+2.")
+    st.info("Percentuais calculados sobre os pedidos atendidos. Até D+0, Até D+1 e Até D+2 são faixas acumuladas; Acima de D+2 representa os atendimentos com mais de 2 dias.")
     st.subheader("Evolução SLA %")
     fig=go.Figure()
     for coluna,cor in [("Até D+0","#0068C9"),("Até D+1","#008000"),("Até D+2","#FF2B2B"),("Acima de D+2","#7C3AED")]:
