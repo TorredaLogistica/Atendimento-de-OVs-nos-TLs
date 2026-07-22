@@ -172,12 +172,27 @@ if not periodos_disponiveis:
     st.error("Nenhum mês de referência foi encontrado na base.")
     st.stop()
 periodo_atual = pd.Timestamp.today().to_period("M")
-periodo_padrao = periodo_atual if periodo_atual in periodos_disponiveis else periodos_disponiveis[0]
+if periodo_atual not in periodos_disponiveis:
+    periodos_disponiveis.insert(0, periodo_atual)
+periodo_padrao = periodo_atual
 with st.sidebar:
     st.header("Visualização")
     visualizacao = st.radio("Selecione a consulta", ["📅 Visão Diária", "📊 Evolução Mensal"], label_visibility="collapsed")
     st.header("Filtros")
-    periodo_referencia = st.selectbox("Mês de referência", periodos_disponiveis, index=periodos_disponiveis.index(periodo_padrao), format_func=lambda p: p.strftime("%m/%Y"))
+    periodo_selecionado = st.selectbox(
+        "Mês de referência",
+        periodos_disponiveis,
+        index=periodos_disponiveis.index(periodo_padrao),
+        format_func=lambda p: p.strftime("%m/%Y"),
+        disabled=visualizacao == "📊 Evolução Mensal",
+        help=(
+            "Na Evolução Mensal, o mês de referência é fixado automaticamente "
+            "no mês atual e o período considera os meses anteriores."
+        ),
+    )
+    periodo_referencia = (
+        periodo_atual if visualizacao == "📊 Evolução Mensal" else periodo_selecionado
+    )
     busca = st.text_input("Buscar OV", placeholder="Digite o número da OV")
     data_pedido_filtro = st.date_input("Data do pedido", value=None, min_value=data_min, max_value=max(data_max, date.today()), format="DD/MM/YYYY", disabled=visualizacao == "📊 Evolução Mensal")
 try:
@@ -207,29 +222,47 @@ if data_pedido_filtro is not None and visualizacao == "📅 Visão Diária":
     filtrado = filtrado[filtrado[c_pedido].dt.normalize() == pd.Timestamp(data_pedido_filtro).normalize()]
 
 if visualizacao == "📊 Evolução Mensal":
-    periodo_acumulado = st.radio("Período Acumulado:", [3, 6, 9, 12], index=3, horizontal=True, key="periodo_acumulado_evolucao")
+    periodo_acumulado = st.radio(
+        "Período Acumulado:",
+        [3, 6, 9, 12],
+        index=0,
+        horizontal=True,
+        key="periodo_acumulado_evolucao",
+        help="O período termina no mês atual e considera os meses anteriores.",
+    )
     inicio_periodo = periodo_referencia - (periodo_acumulado - 1)
     base_evolucao = base_filtrada[base_filtrada[c_pedido].dt.to_period("M").between(inicio_periodo, periodo_referencia)].copy()
     base_evolucao["Período"] = base_evolucao[c_pedido].dt.to_period("M")
     linhas=[]
     for periodo in pd.period_range(inicio_periodo, periodo_referencia, freq="M"):
         dados_mes=base_evolucao[base_evolucao["Período"] == periodo]
-        atendidos=dados_mes[dados_mes["Pedido Atendido"]]
-        total=len(atendidos)
-        def pct(cond): return int(cond.sum()) / total * 100 if total else 0.0
-        linhas.append({"Mês":periodo.strftime("%m/%Y"), "Até D+0":pct(atendidos["Dias para Atendimento"] <= 0), "Até D+1":pct(atendidos["Dias para Atendimento"] <= 1), "Até D+2":pct(atendidos["Dias para Atendimento"] <= 2), "Acima de D+2":pct(atendidos["Dias para Atendimento"] > 2), "Total Pedidos":len(dados_mes)})
+        total=len(dados_mes)
+        atendido=dados_mes["Pedido Atendido"]
+        dias=dados_mes["Dias para Atendimento"]
+        def pct(cond):
+            return int(cond.sum()) / total * 100 if total else 0.0
+        linhas.append({
+            "Mês":periodo.strftime("%m/%Y"),
+            "Até D+0":pct(atendido & (dias == 0)),
+            "Até D+1":pct(atendido & (dias == 1)),
+            "Até D+2":pct(atendido & (dias == 2)),
+            "Acima de D+2":pct(atendido & (dias > 2)),
+            "Total Pedidos":total,
+        })
     evolucao=pd.DataFrame(linhas)
-    atendidos_ac=base_evolucao[base_evolucao["Pedido Atendido"]]
-    total_ac=len(atendidos_ac)
-    def pct_ac(cond): return int(cond.sum()) / total_ac * 100 if total_ac else 0.0
+    total_ac=len(base_evolucao)
+    atendido_ac=base_evolucao["Pedido Atendido"]
+    dias_ac=base_evolucao["Dias para Atendimento"]
+    def pct_ac(cond):
+        return int(cond.sum()) / total_ac * 100 if total_ac else 0.0
     st.subheader(f"Indicadores Consolidados — Acumulado ({periodo_acumulado} meses)")
     c1,c2,c3,c4,c5=st.columns(5)
-    c1.metric("Até D+0", f"{pct_ac(atendidos_ac['Dias para Atendimento'] <= 0):.2f}%".replace('.',','))
-    c2.metric("Até D+1", f"{pct_ac(atendidos_ac['Dias para Atendimento'] <= 1):.2f}%".replace('.',','))
-    c3.metric("Até D+2", f"{pct_ac(atendidos_ac['Dias para Atendimento'] <= 2):.2f}%".replace('.',','))
-    c4.metric("Acima de D+2", f"{pct_ac(atendidos_ac['Dias para Atendimento'] > 2):.2f}%".replace('.',','))
+    c1.metric("SLA D+0", f"{pct_ac(atendido_ac & (dias_ac == 0)):.2f}%".replace('.',','))
+    c2.metric("SLA D+1", f"{pct_ac(atendido_ac & (dias_ac == 1)):.2f}%".replace('.',','))
+    c3.metric("SLA D+2", f"{pct_ac(atendido_ac & (dias_ac == 2)):.2f}%".replace('.',','))
+    c4.metric("SLA Acima de D+2", f"{pct_ac(atendido_ac & (dias_ac > 2)):.2f}%".replace('.',','))
     c5.metric("Total Pedidos", f"{len(base_evolucao):,}".replace(',','.'))
-    st.info("Percentuais calculados sobre os pedidos atendidos. As linhas representam o percentual mensal atendido até D+0, D+1, D+2 e acima de D+2.")
+    st.info("Percentuais calculados sobre o total de pedidos, usando as mesmas faixas exclusivas da Visão Diária: D+0, D+1, D+2 e acima de D+2.")
     st.subheader("Evolução SLA %")
     fig=go.Figure()
     for coluna,cor in [("Até D+0","#0068C9"),("Até D+1","#008000"),("Até D+2","#FF2B2B"),("Acima de D+2","#7C3AED")]:
