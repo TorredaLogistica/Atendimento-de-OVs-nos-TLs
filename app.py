@@ -120,7 +120,7 @@ def excel_para_download(df: pd.DataFrame) -> bytes:
 
 
 st.title("📦 Indicador de Atendimento de OVs nos TLs")
-st.caption("Monitoramento dos pedidos atendidos por prazo e dos pedidos ainda em atendimento do Canal de TELEVENDAS")
+st.caption("Monitoramento dos pedidos atendidos por prazo e dos pedidos ainda em atendimento, com seleção por Canal")
 
 CAMINHO_BASE = Path(__file__).resolve().parent / NOME_ARQUIVO_PADRAO
 
@@ -205,7 +205,7 @@ except Exception as erro:
 # Filtros comuns às duas visualizações.
 with st.sidebar:
     selecoes = {}
-    for coluna, titulo in [("Reg.", "Região/UF"), ("Org. vendas", "Organização de vendas"), ("Situação", "Situação")]:
+    for coluna, titulo in [("Canal", "Canal / Operação"), ("Reg.", "Região/UF"), ("Org. vendas", "Organização de vendas"), ("Situação", "Situação")]:
         opcoes = lista_opcoes(df, coluna)
         if opcoes:
             selecoes[coluna] = st.multiselect(titulo, opcoes)
@@ -378,7 +378,7 @@ if card_ativo:
     st.caption("O card destacado está filtrando a tabela. Clique novamente no mesmo card para exibir todos os pedidos.")
 
 ordem = ["No Prazo", "Em Atraso", "Faixa do Indicador", "Dias Úteis em Aberto", "Dias para Atendimento"]
-colunas_exibicao = [c for c in ["Doc. SD", "Denominação", "Cliente", "Org. vendas", "Reg.", "Local", "Data ped.", "Data atend.", "Data exped.", "Nome", "Localidade", "CEP", "Data SIAKI", "Dif. Dias", "Situação"] if c in tabela_filtrada.columns] + ordem
+colunas_exibicao = [c for c in ["Doc. SD", "Denominação", "Cliente", "Canal", "Org. vendas", "Reg.", "Local", "Data ped.", "Data atend.", "Data exped.", "Nome", "Localidade", "CEP", "Data SIAKI", "Dif. Dias", "Situação"] if c in tabela_filtrada.columns] + ordem
 resultado = tabela_filtrada[colunas_exibicao].sort_values(["Em Atraso", "Dias Úteis em Aberto"], ascending=[False, False])
 
 st.dataframe(
