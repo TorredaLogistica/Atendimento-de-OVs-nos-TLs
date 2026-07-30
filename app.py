@@ -332,9 +332,18 @@ div[data-testid="stButton"] > button[kind="primary"] {
 
 if "card_selecionado" not in st.session_state:
     st.session_state.card_selecionado = None
+if "canal_card_selecionado" not in st.session_state:
+    st.session_state.canal_card_selecionado = None
 
 def alternar_card(nome):
     st.session_state.card_selecionado = None if st.session_state.card_selecionado == nome else nome
+    # Sempre que o card principal mudar, remove o detalhamento por canal anterior.
+    st.session_state.canal_card_selecionado = None
+
+def alternar_canal_card(canal):
+    st.session_state.canal_card_selecionado = (
+        None if st.session_state.canal_card_selecionado == canal else canal
+    )
 
 total_pedidos = len(filtrado)
 
@@ -370,6 +379,67 @@ for coluna_card, (chave, titulo, valor) in zip(colunas_cards, cards):
     )
 
 card_ativo = st.session_state.card_selecionado
+
+# Quatro cards de detalhamento por Canal aparecem somente após a seleção
+# de um dos cards principais de SLA/status.
+def mascara_card(base: pd.DataFrame, chave: str) -> pd.Series:
+    if chave == "d0":
+        return base["Pedido Atendido"] & (base["Dias para Atendimento"] == 0)
+    if chave == "d1":
+        return base["Pedido Atendido"] & (base["Dias para Atendimento"] == 1)
+    if chave == "d2":
+        return base["Pedido Atendido"] & (base["Dias para Atendimento"] == 2)
+    if chave == "acima_d2":
+        return base["Pedido Atendido"] & (base["Dias para Atendimento"] > 2)
+    if chave == "em_atendimento":
+        return base["Pedido em Atendimento"]
+    if chave == "no_prazo":
+        return base["No Prazo"]
+    if chave == "em_atraso":
+        return base["Em Atraso"]
+    return pd.Series(True, index=base.index)
+
+if card_ativo:
+    st.markdown("#### Visão por Canal")
+    canais_cards = [
+        ("TeleVendas", "TeleVendas"),
+        ("E-Commerce", "Ecommerce"),
+        ("Flex", "Flex"),
+        ("PME", "PME"),
+    ]
+    colunas_canais = st.columns(4)
+    mascara_ativa = mascara_card(filtrado, card_ativo)
+
+    for coluna_canal, (valor_canal, titulo_canal) in zip(colunas_canais, canais_cards):
+        base_canal = filtrado[
+            filtrado["Canal"].astype(str).str.strip().str.casefold()
+            == valor_canal.casefold()
+        ]
+        valor_canal_card = int(mascara_card(base_canal, card_ativo).sum())
+        total_canal = len(base_canal)
+        percentual_canal = (valor_canal_card / total_canal * 100) if total_canal else 0.0
+        canal_selecionado = st.session_state.canal_card_selecionado == valor_canal
+        rotulo_canal = (
+            f"**{titulo_canal}**\n\n"
+            f"{valor_canal_card:,}\n\n"
+            f"{percentual_canal:.1f}% do canal"
+        ).replace(",", "X").replace(".", ",").replace("X", ".")
+        coluna_canal.button(
+            rotulo_canal,
+            key=f"canal_card_{card_ativo}_{valor_canal}",
+            type="primary" if canal_selecionado else "secondary",
+            use_container_width=True,
+            on_click=alternar_canal_card,
+            args=(valor_canal,),
+            help=(
+                "Clique para filtrar a tabela pelo Canal. "
+                "Clique novamente para remover o filtro do Canal."
+            ),
+        )
+else:
+    # Sem card principal selecionado, mantém exatamente a visão atual.
+    st.session_state.canal_card_selecionado = None
+
 if card_ativo == "d0":
     tabela_filtrada = filtrado[filtrado["Pedido Atendido"] & (filtrado["Dias para Atendimento"] == 0)].copy()
 elif card_ativo == "d1":
@@ -387,11 +457,25 @@ elif card_ativo == "em_atraso":
 else:
     tabela_filtrada = filtrado.copy()
 
+canal_card_ativo = st.session_state.canal_card_selecionado
+if card_ativo and canal_card_ativo:
+    tabela_filtrada = tabela_filtrada[
+        tabela_filtrada["Canal"].astype(str).str.strip().str.casefold()
+        == canal_card_ativo.casefold()
+    ]
+
 st.divider()
 titulo_ativo = next((titulo for chave, titulo, _ in cards if chave == card_ativo), "Todos os pedidos")
-st.subheader(f"Detalhamento dos pedidos — {titulo_ativo}")
+sufixo_canal = f" | {canal_card_ativo}" if canal_card_ativo else ""
+st.subheader(f"Detalhamento dos pedidos — {titulo_ativo}{sufixo_canal}")
 if card_ativo:
-    st.caption("O card destacado está filtrando a tabela. Clique novamente no mesmo card para exibir todos os pedidos.")
+    if canal_card_ativo:
+        st.caption(
+            "O card principal e o card de Canal destacados estão filtrando a tabela. "
+            "Clique novamente no card do Canal para exibir todos os canais."
+        )
+    else:
+        st.caption("O card destacado está filtrando a tabela. Clique novamente no mesmo card para exibir todos os pedidos.")
 
 ordem = ["No Prazo", "Em Atraso", "Faixa do Indicador", "Dias Úteis em Aberto", "Dias para Atendimento"]
 colunas_exibicao = [c for c in ["Doc. SD", "Denominação", "Cliente", "Canal", "Org. vendas", "Reg.", "Local", "Data ped.", "Data atend.", "Data exped.", "Nome", "Localidade", "CEP", "Data SIAKI", "Dif. Dias", "Situação"] if c in tabela_filtrada.columns] + ordem
