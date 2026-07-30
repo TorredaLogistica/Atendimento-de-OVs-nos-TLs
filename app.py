@@ -193,6 +193,17 @@ with st.sidebar:
     periodo_referencia = (
         periodo_atual if visualizacao == "📊 Evolução Mensal" else periodo_selecionado
     )
+
+    # Filtro de Canal exibido logo abaixo do mês de referência.
+    c_canal = localizar_coluna(df_original.columns, ["Canal"], obrigatoria=False)
+    opcoes_canal = lista_opcoes(df_original, c_canal) if c_canal else []
+    canais_selecionados = st.multiselect(
+        "Canal / Operação",
+        opcoes_canal,
+        placeholder="Selecione o Canal",
+        help="Selecione uma ou mais operações. Sem seleção, todos os canais serão considerados.",
+    )
+
     busca = st.text_input("Buscar OV", placeholder="Digite o número da OV")
     data_pedido_filtro = st.date_input("Data do pedido", value=None, min_value=data_min, max_value=max(data_max, date.today()), format="DD/MM/YYYY", disabled=visualizacao == "📊 Evolução Mensal")
 try:
@@ -205,12 +216,17 @@ except Exception as erro:
 # Filtros comuns às duas visualizações.
 with st.sidebar:
     selecoes = {}
-    for coluna, titulo in [("Canal", "Canal / Operação"), ("Reg.", "Região/UF"), ("Org. vendas", "Organização de vendas"), ("Situação", "Situação")]:
+    for coluna, titulo in [("Reg.", "Região/UF"), ("Org. vendas", "Organização de vendas"), ("Situação", "Situação")]:
         opcoes = lista_opcoes(df, coluna)
         if opcoes:
             selecoes[coluna] = st.multiselect(titulo, opcoes)
     st.caption(f"Fonte automática: {nome_arquivo}")
 base_filtrada = df.copy()
+if c_canal and canais_selecionados:
+    base_filtrada = base_filtrada[
+        base_filtrada[c_canal].astype(str).str.strip().isin(canais_selecionados)
+    ]
+
 for coluna, valores in selecoes.items():
     if valores:
         base_filtrada = base_filtrada[base_filtrada[coluna].astype(str).isin(valores)]
