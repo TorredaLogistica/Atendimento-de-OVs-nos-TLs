@@ -121,40 +121,7 @@ def excel_para_download(df: pd.DataFrame) -> bytes:
 
 st.title("📦 Indicador de Atendimento de OVs nos TLs")
 
-# Orientação em destaque para estimular o uso dos cards interativos.
-st.markdown("""
-<style>
-.instrucao-cards {
-    margin: 0.35rem 0 1.25rem 0;
-    padding: 0.95rem 1.15rem;
-    border-left: 6px solid #c00000;
-    border-radius: 10px;
-    background: linear-gradient(90deg, #fff1f1 0%, #ffffff 100%);
-    box-shadow: 0 3px 10px rgba(192, 0, 0, 0.10);
-    color: #252733;
-}
-.instrucao-cards .descricao {
-    display: block;
-    margin-bottom: 0.35rem;
-    color: #5f6368;
-    font-size: 0.98rem;
-}
-.instrucao-cards .acao {
-    display: block;
-    color: #9b0000;
-    font-size: 1.05rem;
-    font-weight: 700;
-}
-</style>
-<div class="instrucao-cards">
-    <span class="descricao">
-        Monitore os pedidos atendidos por prazo e os pedidos que ainda estão em atendimento.
-    </span>
-    <span class="acao">
-        👆 Selecione um dos cards abaixo para abrir a visão por Canal e consultar o detalhamento de TeleVendas, Ecommerce, Flex e PME.
-    </span>
-</div>
-""", unsafe_allow_html=True)
+
 
 CAMINHO_BASE = Path(__file__).resolve().parent / NOME_ARQUIVO_PADRAO
 
@@ -240,6 +207,48 @@ with st.sidebar:
 
     busca = st.text_input("Buscar OV", placeholder="Digite o número da OV")
     data_pedido_filtro = st.date_input("Data do pedido", value=None, min_value=data_min, max_value=max(data_max, date.today()), format="DD/MM/YYYY", disabled=visualizacao == "📊 Evolução Mensal")
+
+# A orientação interativa aparece somente na Visão Diária.
+# Na Evolução Mensal, mantém o texto simples utilizado anteriormente.
+if visualizacao == "📅 Visão Diária":
+    st.markdown("""
+    <style>
+    .instrucao-cards {
+        margin: 0.35rem 0 1.25rem 0;
+        padding: 0.95rem 1.15rem;
+        border-left: 6px solid #c00000;
+        border-radius: 10px;
+        background: linear-gradient(90deg, #fff1f1 0%, #ffffff 100%);
+        box-shadow: 0 3px 10px rgba(192, 0, 0, 0.10);
+        color: #252733;
+    }
+    .instrucao-cards .descricao {
+        display: block;
+        margin-bottom: 0.35rem;
+        color: #5f6368;
+        font-size: 0.98rem;
+    }
+    .instrucao-cards .acao {
+        display: block;
+        color: #9b0000;
+        font-size: 1.05rem;
+        font-weight: 700;
+    }
+    </style>
+    <div class="instrucao-cards">
+        <span class="descricao">
+            Monitore os pedidos atendidos por prazo e os pedidos que ainda estão em atendimento.
+        </span>
+        <span class="acao">
+            👆 Selecione um dos cards abaixo para abrir a visão por Canal e consultar o detalhamento de TeleVendas, Ecommerce, Flex e PME.
+        </span>
+    </div>
+    """, unsafe_allow_html=True)
+else:
+    st.caption(
+        "Monitoramento dos pedidos atendidos por prazo e dos pedidos ainda em atendimento, "
+        "com seleção por Canal"
+    )
 try:
     # A data de referência deixou de ser um filtro visível e passa a ser a data atual.
     df = preparar_base(df_original, pd.Timestamp.today().normalize())
