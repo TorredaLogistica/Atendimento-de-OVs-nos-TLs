@@ -240,7 +240,7 @@ if visualizacao == "📅 Visão Diária":
             Monitore os pedidos atendidos por prazo e os pedidos que ainda estão em atendimento.
         </span>
         <span class="acao">
-            👆 Selecione um dos cards abaixo para abrir a visão por Canal e consultar o detalhamento de TeleVendas, Ecommerce, Flex e PME.
+            Selecione um dos cards abaixo para abrir a visão por Canal e consultar o detalhamento de TeleVendas, Ecommerce, Flex e PME.
         </span>
     </div>
     """, unsafe_allow_html=True)
