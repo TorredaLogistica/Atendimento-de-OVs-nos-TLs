@@ -205,6 +205,29 @@ with st.sidebar:
         help="Selecione uma ou mais operações. Sem seleção, todos os canais serão considerados.",
     )
 
+    # Situação fica logo abaixo de Canal / Operação para facilitar a consulta.
+    c_situacao_filtro = localizar_coluna(
+        df_original.columns, ["Situação", "Situacao", "Status"]
+    )
+    opcoes_situacao = lista_opcoes(df_original, c_situacao_filtro)
+    situacoes_selecionadas = st.multiselect(
+        "✨ Situação | NOVO: A Faturar em todos os meses",
+        opcoes_situacao,
+        placeholder="Selecione a Situação",
+        help=(
+            "Ao selecionar A Faturar na Visão Diária, o indicador desconsidera "
+            "o Mês de referência e exibe os pedidos de todos os meses disponíveis."
+        ),
+        key="filtro_situacao",
+    )
+    a_faturar_selecionado = any(
+        normalizar_texto(valor) == "A FATURAR" for valor in situacoes_selecionadas
+    )
+    if a_faturar_selecionado and visualizacao == "📅 Visão Diária":
+        st.success("✅ A Faturar ativo: exibindo pedidos de todos os meses.")
+    elif any(normalizar_texto(valor) == "A FATURAR" for valor in opcoes_situacao):
+        st.info("💡 Selecione A Faturar para consultar todos os pedidos pendentes, independentemente do mês.")
+
     busca = st.text_input("Buscar OV", placeholder="Digite o número da OV")
     data_pedido_filtro = st.date_input("Data do pedido", value=None, min_value=data_min, max_value=max(data_max, date.today()), format="DD/MM/YYYY", disabled=visualizacao == "📊 Evolução Mensal")
 
@@ -258,8 +281,8 @@ except Exception as erro:
 
 # Filtros comuns às duas visualizações.
 with st.sidebar:
-    selecoes = {}
-    for coluna, titulo in [("Reg.", "Região/UF"), ("Org. vendas", "Organização de vendas"), ("Situação", "Situação")]:
+    selecoes = {c_situacao_filtro: situacoes_selecionadas}
+    for coluna, titulo in [("Reg.", "Região/UF"), ("Org. vendas", "Organização de vendas")]:
         opcoes = lista_opcoes(df, coluna)
         if opcoes:
             selecoes[coluna] = st.multiselect(titulo, opcoes)
@@ -272,11 +295,20 @@ if c_canal and canais_selecionados:
 
 for coluna, valores in selecoes.items():
     if valores:
-        base_filtrada = base_filtrada[base_filtrada[coluna].astype(str).isin(valores)]
+        base_filtrada = base_filtrada[
+            base_filtrada[coluna].astype(str).str.strip().isin(valores)
+        ]
 if busca.strip():
     c_doc_busca = localizar_coluna(base_filtrada.columns, ["Doc. SD", "Documento SD", "OV"])
     base_filtrada = base_filtrada[base_filtrada[c_doc_busca].astype(str).str.contains(busca.strip(), case=False, na=False, regex=False)]
-filtrado = base_filtrada[base_filtrada[c_pedido].dt.to_period("M") == periodo_referencia].copy()
+# Na Visão Diária, A Faturar consulta todos os meses e ignora somente o filtro de mês.
+if visualizacao == "📅 Visão Diária" and a_faturar_selecionado:
+    filtrado = base_filtrada.copy()
+else:
+    filtrado = base_filtrada[
+        base_filtrada[c_pedido].dt.to_period("M") == periodo_referencia
+    ].copy()
+
 if data_pedido_filtro is not None and visualizacao == "📅 Visão Diária":
     filtrado = filtrado[filtrado[c_pedido].dt.normalize() == pd.Timestamp(data_pedido_filtro).normalize()]
 
