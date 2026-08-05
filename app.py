@@ -125,9 +125,6 @@ st.title("📦 Indicador de Atendimento de OVs nos TLs")
 
 CAMINHO_BASE = Path(__file__).resolve().parent / NOME_ARQUIVO_PADRAO
 
-with st.sidebar:
-    st.header("Base de dados")
-    st.caption(f"Fonte automática: {NOME_ARQUIVO_PADRAO}")
 
 if not CAMINHO_BASE.exists():
     st.error(
@@ -176,6 +173,12 @@ periodo_atual = pd.Timestamp.today().to_period("M")
 if periodo_atual not in periodos_disponiveis:
     periodos_disponiveis.insert(0, periodo_atual)
 periodo_padrao = periodo_atual
+# Consulta o estado anterior do filtro para desabilitar imediatamente o Mês de referência.
+a_faturar_no_estado = any(
+    normalizar_texto(valor) == "A FATURAR"
+    for valor in st.session_state.get("filtro_situacao", [])
+)
+
 with st.sidebar:
     st.header("Visualização")
     visualizacao = st.radio("Selecione a consulta", ["📅 Visão Diária", "📊 Evolução Mensal"], label_visibility="collapsed")
@@ -185,10 +188,11 @@ with st.sidebar:
         periodos_disponiveis,
         index=periodos_disponiveis.index(periodo_padrao),
         format_func=lambda p: p.strftime("%m/%Y"),
-        disabled=visualizacao == "📊 Evolução Mensal",
+        disabled=(visualizacao == "📊 Evolução Mensal" or a_faturar_no_estado),
         help=(
-            "Na Evolução Mensal, o mês de referência é fixado automaticamente "
-            "no mês atual e o período considera os meses anteriores."
+            "Na Evolução Mensal, o mês é controlado automaticamente. "
+            "Na Visão Diária, o filtro também fica desabilitado quando A Faturar "
+            "é selecionado, pois essa consulta considera todos os meses."
         ),
     )
     periodo_referencia = (
@@ -211,7 +215,7 @@ with st.sidebar:
     )
     opcoes_situacao = lista_opcoes(df_original, c_situacao_filtro)
     situacoes_selecionadas = st.multiselect(
-        "✨ Situação | NOVO: A Faturar em todos os meses",
+        "Situação do Pedido",
         opcoes_situacao,
         placeholder="Selecione a Situação",
         help=(
