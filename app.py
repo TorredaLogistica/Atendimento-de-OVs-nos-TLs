@@ -15,6 +15,19 @@ st.set_page_config(page_title="Indicador de Atendimento de OVs nos TLs", page_ic
 
 ABA_PADRAO = "BASE OVS"
 NOME_ARQUIVO_PADRAO = "Base OVs TLs.xlsx"
+NOME_ARQUIVO_ATUALIZACAO = "atualizacao_base.txt"
+
+def ler_informacao_atualizacao() -> str:
+    """Lê o texto exibido no topo da barra lateral."""
+    caminho = Path(__file__).resolve().parent / NOME_ARQUIVO_ATUALIZACAO
+    if not caminho.exists():
+        return "Atualização da base não informada."
+
+    try:
+        conteudo = caminho.read_text(encoding="utf-8").strip()
+        return conteudo or "Atualização da base não informada."
+    except Exception:
+        return "Não foi possível ler a informação de atualização da base."
 
 
 def normalizar_texto(valor: object) -> str:
@@ -180,6 +193,24 @@ a_faturar_no_estado = any(
 )
 
 with st.sidebar:
+    informacao_atualizacao = ler_informacao_atualizacao()
+    st.markdown(
+        f"""
+        <div style="
+            margin: 0 0 1.15rem 0;
+            padding: 0.70rem 0.80rem;
+            border-radius: 8px;
+            background-color: #ffffff;
+            border: 1px solid #d7dce2;
+            color: #111111;
+            font-size: 0.96rem;
+            line-height: 1.35;
+        ">
+            {informacao_atualizacao}
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
     st.header("Visualização")
     visualizacao = st.radio("Selecione a consulta", ["📅 Visão Diária", "📊 Evolução Mensal"], label_visibility="collapsed")
     st.header("Filtros")
