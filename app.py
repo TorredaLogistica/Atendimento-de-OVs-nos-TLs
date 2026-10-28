@@ -14,7 +14,7 @@ import plotly.graph_objects as go
 st.set_page_config(page_title="Indicador de Atendimento de OVs nos TLs", page_icon="📦", layout="wide")
 
 ABA_PADRAO = "BASE OVS"
-NOME_ARQUIVO_PADRAO = "Base OVs TLs.parquet"
+NOME_ARQUIVO_PADRAO = "Base OVs TLs.xlsx"
 NOME_ARQUIVO_ATUALIZACAO = "atualizacao_base.txt"
 
 def ler_informacao_atualizacao() -> str:
@@ -48,8 +48,8 @@ def localizar_coluna(colunas, candidatos, obrigatoria=True):
 
 
 @st.cache_data(show_spinner=False)
-def carregar_parquet(caminho: str) -> pd.DataFrame:
-    return pd.read_parquet(caminho, engine="pyarrow")
+def carregar_excel(conteudo: bytes, aba: str) -> pd.DataFrame:
+    return pd.read_excel(BytesIO(conteudo), sheet_name=aba, engine="openpyxl", dtype=object)
 
 
 def preparar_base(df: pd.DataFrame, data_referencia: pd.Timestamp) -> pd.DataFrame:
@@ -142,15 +142,32 @@ CAMINHO_BASE = Path(__file__).resolve().parent / NOME_ARQUIVO_PADRAO
 if not CAMINHO_BASE.exists():
     st.error(
         f'O arquivo "{NOME_ARQUIVO_PADRAO}" não foi encontrado no repositório. '
-        'Salve o arquivo Parquet na mesma pasta do arquivo app.py.'
+        'Salve a planilha na mesma pasta do arquivo app.py.'
     )
     st.stop()
 
 try:
+    tamanho_base = CAMINHO_BASE.stat().st_size
+    if tamanho_base < 10_000:
+        inicio_arquivo = CAMINHO_BASE.read_bytes()[:200]
+        if b"git-lfs.github.com/spec" in inicio_arquivo:
+            st.error(
+                "A base foi encontrada apenas como ponteiro do Git LFS. "
+                "O ambiente não baixou o conteúdo real do arquivo Excel."
+            )
+            st.stop()
+    conteudo = CAMINHO_BASE.read_bytes()
     nome_arquivo = CAMINHO_BASE.name
-    df_original = carregar_parquet(str(CAMINHO_BASE))
 except Exception as erro:
-    st.error(f"Não foi possível ler o arquivo Parquet: {erro}")
+    st.error(f"Não foi possível acessar a base armazenada no repositório: {erro}")
+    st.stop()
+
+try:
+    df_original = carregar_excel(conteudo, ABA_PADRAO)
+except ValueError:
+    df_original = carregar_excel(conteudo, 0)
+except Exception as erro:
+    st.error(f"Não foi possível ler o arquivo: {erro}")
     st.stop()
 
 c_pedido = localizar_coluna(df_original.columns, ["Data ped.", "Data pedido", "Data Pedido"])
