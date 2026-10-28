@@ -397,28 +397,69 @@ m_atraso = int(filtrado["Em Atraso"].sum())
 # Cards clicáveis: funcionam como botões para filtrar a tabela detalhada.
 st.markdown("""
 <style>
-div[data-testid="stButton"] > button {
+/* Cards no padrão visual do modelo enviado */
+div[data-testid="stButton"] {
     width: 100%;
-    min-height: 142px;
-    border-radius: 14px;
-    border: 2px solid #d7dce2;
-    background: linear-gradient(145deg, #ffffff, #f4f6f8);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.10);
-    font-size: 23px;
-    font-weight: 700;
-    white-space: pre-line;
-    transition: all 0.15s ease-in-out;
 }
-div[data-testid="stButton"] > button:hover {
-    border-color: #c00000;
-    color: #c00000;
-    transform: translateY(-2px);
-    box-shadow: 0 7px 16px rgba(192, 0, 0, 0.18);
+div[data-testid="stButton"] button,
+div[data-testid="stButton"] button[kind="secondary"],
+div[data-testid="stButton"] .stBaseButton-secondary {
+    width: 100% !important;
+    min-height: 110px !important;
+    height: auto !important;
+    padding: 9px 8px !important;
+    border: 1px solid #d5d7db !important;
+    border-radius: 10px !important;
+    background: #ffffff !important;
+    color: #101828 !important;
+    box-shadow: none !important;
+    transition: border-color 0.15s ease, background-color 0.15s ease !important;
 }
-div[data-testid="stButton"] > button[kind="primary"] {
-    border-color: #c00000;
-    background: linear-gradient(145deg, #c00000, #940000);
-    color: #ffffff;
+div[data-testid="stButton"] button p,
+div[data-testid="stButton"] button span,
+div[data-testid="stButton"] button div {
+    margin: 0 !important;
+    padding: 0 !important;
+    color: inherit !important;
+    font-size: 17px !important;
+    font-weight: 400 !important;
+    line-height: 1.82 !important;
+    text-align: center !important;
+    white-space: pre-line !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+}
+div[data-testid="stButton"] button strong {
+    font-weight: 700 !important;
+}
+div[data-testid="stButton"] button:hover,
+div[data-testid="stButton"] .stBaseButton-secondary:hover {
+    border-color: #8f949c !important;
+    background: #fafafa !important;
+    color: #101828 !important;
+    transform: none !important;
+    box-shadow: none !important;
+}
+div[data-testid="stButton"] button[kind="primary"],
+div[data-testid="stButton"] .stBaseButton-primary {
+    border: 1px solid #b00000 !important;
+    background: #fff3f3 !important;
+    color: #9b0000 !important;
+    box-shadow: none !important;
+}
+@media (max-width: 1200px) {
+    div[data-testid="stButton"] button,
+    div[data-testid="stButton"] .stBaseButton-secondary,
+    div[data-testid="stButton"] .stBaseButton-primary {
+        min-height: 104px !important;
+        padding: 7px 5px !important;
+    }
+    div[data-testid="stButton"] button p,
+    div[data-testid="stButton"] button span,
+    div[data-testid="stButton"] button div {
+        font-size: 15px !important;
+        line-height: 1.70 !important;
+    }
 }
 </style>
 """, unsafe_allow_html=True)
@@ -457,8 +498,8 @@ for coluna_card, (chave, titulo, valor) in zip(colunas_cards, cards):
     selecionado = st.session_state.card_selecionado == chave
     percentual = percentual_sobre_total(valor)
     rotulo_card = (
-        f"**{titulo}**\n\n"
-        f"{valor:,}\n\n"
+        f"**{titulo}**\n"
+        f"{valor:,}\n"
         f"{percentual:.1f}% do total"
     ).replace(",", "X").replace(".", ",").replace("X", ".")
     coluna_card.button(
@@ -513,8 +554,8 @@ if card_ativo:
         percentual_canal = (valor_canal_card / total_canal * 100) if total_canal else 0.0
         canal_selecionado = st.session_state.canal_card_selecionado == valor_canal
         rotulo_canal = (
-            f"**{titulo_canal}**\n\n"
-            f"{valor_canal_card:,}\n\n"
+            f"**{titulo_canal}**\n"
+            f"{valor_canal_card:,}\n"
             f"{percentual_canal:.1f}% do canal"
         ).replace(",", "X").replace(".", ",").replace("X", ".")
         coluna_canal.button(
